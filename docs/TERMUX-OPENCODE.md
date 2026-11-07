@@ -42,7 +42,7 @@ Python **3.10 or newer** is required. The app has no third-party dependencies.
 ## 2. Get the app
 
 ```bash
-git clone https://github.com/YOUR-USER/server-ai-studio.git
+git clone https://github.com/konchetobe/server-ai-studio.git
 cd server-ai-studio
 ```
 
@@ -180,7 +180,7 @@ opencode
 To work on the project inside the chroot, clone it there:
 
 ```bash
-git clone https://github.com/YOUR-USER/server-ai-studio.git
+git clone https://github.com/konchetobe/server-ai-studio.git
 cd server-ai-studio
 opencode
 ```

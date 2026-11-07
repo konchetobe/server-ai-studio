@@ -85,7 +85,7 @@ There is nothing to `pip install`.
 ## Quick start
 
 ```bash
-git clone https://github.com/YOUR-USER/server-ai-studio.git
+git clone https://github.com/konchetobe/server-ai-studio.git
 cd server-ai-studio
 python3 app.py
 ```
