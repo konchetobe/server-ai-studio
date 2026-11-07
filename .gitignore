@@ -1,0 +1,38 @@
+# ── Secrets and runtime configuration ────────────────────────────────
+# The app normally keeps these outside the repo, but never commit a copy.
+config.json
+config.json.tmp
+vast.key
+vast_instance.json
+*.key
+.env
+.env.*
+
+# ── Personal media, prompts, and generated output ────────────────────
+assets/refs/*
+assets/prompts/*
+jobs/*
+*.mp4
+*.mov
+*.webm
+*.mkv
+
+# ── Workflows: ship the stock graphs, never personal ones ────────────
+assets/graphs/*.json
+!assets/graphs/graph-h3-stock-*.json
+
+# ── Python and test caches ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Logs, temporary files, editor and OS junk ────────────────────────
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

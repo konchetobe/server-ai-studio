@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Server AI Studio — MiniMax H3</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">SERVER AI <b>STUDIO</b></div>
+  <span class="pill" id="epPill">provider —</span>
+  <button class="pill act" id="vastBtn" title="Start or stop the Vast machine">Vast —</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="setupBtn">Setup</button>
+  <button class="btn ghost" id="healthBtn">Check worker</button>
+  <button class="btn ghost" id="availBtn">GPU stock</button>
+  <button class="btn" id="settingsBtn">Settings</button>
+</header>
+
+<div class="setupBanner" id="setupBanner" hidden>
+  <div><b>Finish setup</b> — connect Runpod or Vast.ai once, then you can render clips.</div>
+  <button class="btn primary" id="setupBannerBtn">Open setup</button>
+</div>
+
+<main>
+  <section class="col left tabpane active" id="pane-create">
+
+    <div class="card">
+      <h2>Where to render</h2>
+      <div class="row">
+        <div class="field">
+          <label for="backend">Provider</label>
+          <select id="backend">
+            <option value="runpod">Runpod — pay only while it renders</option>
+            <option value="comfyui">Vast.ai / ComfyUI — rent by the hour</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn" id="vastToggle" style="width:100%">Start Vast machine</button>
+        </div>
+      </div>
+      <div class="hint" id="targetState">Not connected yet. Open Setup to add a provider.</div>
+    </div>
+
+    <div class="card">
+      <h2>What should happen in the clip?</h2>
+      <div class="field" style="display:flex;gap:7px">
+        <select id="promptLib"><option value="">— load a saved prompt —</option></select>
+        <button class="btn ghost" id="newPrompt" style="white-space:nowrap">New</button>
+        <button class="btn ghost" id="savePrompt" style="white-space:nowrap">Save</button>
+        <button class="btn ghost" id="delPrompt" style="white-space:nowrap" title="delete loaded prompt">✕</button>
+      </div>
+      <div class="field">
+        <textarea id="prompt" placeholder="Describe the shot in plain English: who is in frame, what they do, how the camera moves, and the mood. Mention your reference images as Picture 1, Picture 2, and so on."></textarea>
+        <div class="hint"><span id="pchars">0</span> characters · sent as written unless “Improve my prompt” is on</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Reference images <span id="refCount" style="color:var(--accent)"></span></h2>
+      <div class="refs" id="refs"><div class="empty">No images yet — add faces, outfits, or a scene style to begin.</div></div>
+      <div class="hint">
+        These are the faces, outfits, and visual style the AI should copy.
+        Click them in the same order your prompt mentions them: the first click becomes Picture 1.
+        Drop image files here, or use ＋ to upload your own.
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn ghost" id="clearRefs">Clear selection</button>
+      </div>
+      <input type="file" id="upload" accept="image/png,image/jpeg,image/webp" multiple hidden>
+    </div>
+
+    <div class="card">
+      <h2>Look &amp; speed</h2>
+      <div class="field">
+        <label for="graphMode">Camera framing</label>
+        <select id="graphMode">
+          <option value="anchored">Follow my reference framing (recommended)</option>
+          <option value="free">Let the AI choose the camera</option>
+        </select>
+        <div class="hint">“Anchored” keeps the opening frame close to your scene reference. “Free” gives the model more room to improvise.</div>
+      </div>
+      <div class="field">
+        <label for="quality">Quality vs. speed</label>
+        <select id="quality">
+          <option value="standard">Balanced — more detail, around 6 min per clip</option>
+          <option value="fast">Fast draft — quicker, around 4 min per clip</option>
+        </select>
+        <div class="hint">Use Fast draft while you are experimenting. Switch to Balanced for the final take.</div>
+      </div>
+      <details class="adv">
+        <summary>Advanced settings</summary>
+        <div class="field">
+          <label for="preset">Quick preset</label>
+          <select id="preset">
+            <option value="">Choose a preset…</option>
+            <option value="fast">Fast draft</option>
+            <option value="balanced">Balanced</option>
+            <option value="quality">Best quality</option>
+          </select>
+          <div class="hint">Presets only change the model, style add-ons, and step count below.</div>
+        </div>
+        <div class="field">
+          <label for="graphSel">Workflow graph</label>
+          <select id="graphSel"></select>
+          <div class="hint" id="graphHint">graph —</div>
+        </div>
+        <div class="field">
+          <label for="model">AI model (checkpoint)</label>
+          <select id="model"></select>
+          <div class="hint">Leave this on the graph default unless a guide tells you otherwise.</div>
+        </div>
+        <div class="field">
+          <label for="lora">Style add-on (LoRA)</label>
+          <select id="lora"></select>
+          <div class="hint">Turbo makes clips render much faster. Realism people helps faces and skin.</div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="loraStrength">Style strength</label>
+            <input id="loraStrength" type="number" step="0.05" min="0" max="2" value="1">
+          </div>
+          <div class="field">
+            <label for="steps">Detail passes (steps)</label>
+            <input id="steps" type="number" min="1" max="20" value="6">
+            <div class="hint">More steps = more detail and more time.</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="lora2">Second style add-on</label>
+          <select id="lora2"></select>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="lora2Strength">Second strength</label>
+            <input id="lora2Strength" type="number" step="0.05" min="0" max="2" value="0.6">
+          </div>
+          <div class="field">
+            <label for="refSize">Reference sharpness</label>
+            <select id="refSize">
+              <option value="max">Maximum detail — slower</option>
+              <option value="match">Match the speed — faster</option>
+            </select>
+          </div>
+        </div>
+        <div class="switch"><label><input type="checkbox" id="enhance"> Improve my prompt with AI (slower, can add detail)</label></div>
+        <div class="switch"><label><input type="checkbox" id="upscale"> Upscale the finished video (sharper, slower)</label></div>
+        <div class="switch"><label><input type="checkbox" id="rife"> Smooth motion with RIFE (adds frames)</label></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Clip settings</h2>
+      <div class="row">
+        <div class="field">
+          <label for="seconds">Length in seconds</label>
+          <input id="seconds" type="number" min="4" max="20" step="1" value="10">
+        </div>
+        <div class="field">
+          <label for="size">Shape</label>
+          <select id="size">
+            <option value="1344x768">Wide — 16:9 (1344×768)</option>
+            <option value="768x1344">Portrait — 9:16 (768×1344)</option>
+            <option value="864x1184">Tall — 3:4 (864×1184)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label for="seed">Starting seed</label>
+          <input id="seed" type="number" value="10101">
+        </div>
+        <div class="field">
+          <label for="takes">How many takes</label>
+          <input id="takes" type="number" min="1" max="20" value="2">
+        </div>
+        <div class="field">
+          <label for="name">Name this set</label>
+          <input id="name" type="text" value="clip-01">
+        </div>
+      </div>
+      <div class="hint">
+        Same seed + same settings gives the same clip. Each extra take uses the next seed,
+        so you get different versions to compare. The name is used for file names and the queue.
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label for="mode">Delivery</label>
+        <select id="mode">
+          <option value="queue">Interactive — priority, one result at a time</option>
+          <option value="batch">Batch — cheaper, may wait in line</option>
+        </select>
+        <div class="hint">Batch mode is a Runpod feature and is billed at a lower rate, but it is best effort.</div>
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label for="park">When the batch finishes</label>
+        <select id="park">
+          <option value="keep">Leave the worker ready for the next run</option>
+          <option value="0">Pause the Runpod endpoint (stops all billing)</option>
+        </select>
+        <div class="hint">
+          Workers already scale to zero after a few idle seconds, which costs nothing.
+          Pausing sets the maximum to 0: the endpoint answers with “paused” until you raise it again.
+        </div>
+      </div>
+
+      <div class="route" id="routeTo">—</div>
+      <div style="margin-top:10px">
+        <button class="btn primary" id="go" style="width:100%;padding:12px">Render my clips</button>
+      </div>
+    </div>
+
+    <div class="card" id="settings" style="display:none">
+      <h2>Settings</h2>
+      <div class="subhead">Connection</div>
+      <div class="field" id="comfyRow">
+        <label for="comfyUrl">ComfyUI address (optional)</label>
+        <input id="comfyUrl" type="text" placeholder="http://your-machine:8189" autocomplete="off">
+        <div class="hint">
+          Leave blank when a Vast machine ID is set — the app reads the current address from Vast,
+          because the mapped port changes when the machine restarts.
+        </div>
+      </div>
+      <div class="field">
+        <label for="vastKey">Vast.ai API key</label>
+        <input id="vastKey" type="password" placeholder="leave blank to keep the saved key" autocomplete="off">
+        <div class="hint">Vast.ai → Account → API Keys. Saved only on this computer.</div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="vastInst">Vast.ai machine ID</label>
+          <input id="vastInst" type="text" placeholder="12345678" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="vastRate">Machine price ($/hour)</label>
+          <input id="vastRate" type="number" step="0.01" min="0" value="1.20">
+          <div class="hint">Used for the cost estimate only.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="autoStop">Stop the Vast machine after this many idle minutes</label>
+        <input id="autoStop" type="number" min="0" step="1" value="10">
+        <div class="hint">0 turns auto-stop off. Stopping keeps the disk, but the machine may not be free when you restart.</div>
+      </div>
+
+      <div class="subhead">Runpod</div>
+      <div class="field">
+        <label for="endpoint">Runpod endpoint ID</label>
+        <input id="endpoint" type="text" placeholder="the short code from your endpoint" autocomplete="off">
+        <div class="hint">Runpod → Serverless → your endpoint. Copy the ID from the URL or the endpoint page.</div>
+      </div>
+      <div class="field">
+        <label for="apikey">Runpod API key</label>
+        <input id="apikey" type="password" placeholder="rpa_… (leave blank to keep the saved key)" autocomplete="off">
+        <div class="hint" id="keyState">No key saved yet.</div>
+      </div>
+
+      <div class="subhead">Defaults</div>
+      <div class="row">
+        <div class="field">
+          <label for="dsize">Default shape</label>
+          <select id="dsize">
+            <option value="1344x768">Wide — 16:9</option>
+            <option value="768x1344">Portrait — 9:16</option>
+            <option value="864x1184">Tall — 3:4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="poll">Check for results every (seconds)</label>
+          <input id="poll" type="number" min="2" max="60" value="4">
+        </div>
+      </div>
+
+      <div class="subhead">Worker control</div>
+      <div class="field" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px">
+        <label for="wmax">How many Runpod workers can run at once</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="wmax" type="number" min="0" max="25" value="1" style="width:92px">
+          <button class="btn" id="applyW">Apply</button>
+          <span class="hint" id="wstate" style="margin:0">—</span>
+        </div>
+        <div class="hint">
+          <b>0</b> pauses the endpoint: it takes no work and costs nothing, but jobs will be rejected.
+          <b>1</b> or more accepts jobs. The minimum stays 0, so you only pay while a clip is actually rendering.
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" id="saveCfg">Save settings</button>
+        <button class="btn ghost" id="setupAgain">Open setup guide</button>
+        <button class="btn danger" id="clearKey">Forget Runpod key</button>
+        <button class="btn danger" id="clearVastKey">Forget Vast key</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" id="availBtn2">GPU stock</button>
+        <button class="btn ghost" id="healthBtn2">Worker health</button>
+      </div>
+      <div class="hint">
+        Keys are stored in <code>~/.server-ai-studio/config.json</code> on this computer with mode 600.
+        They are never written into the project folder and never sent back to the browser.
+      </div>
+    </div>
+
+  </section>
+
+  <section class="col right tabpane" id="pane-batches">
+    <div class="grouphead">
+      <span>Batches</span><span class="line"></span>
+    </div>
+    <div class="jobs" id="batches"><div class="empty">no batches</div></div>
+  </section>
+
+  <section class="col right tabpane" id="pane-queue">
+    <div class="grouphead">
+      <span>Queue</span><span class="line"></span>
+      <button class="btn ghost" id="refresh" style="padding:6px 10px">Refresh</button>
+    </div>
+    <div class="hint" id="queueStats" style="margin:0 0 10px"></div>
+    <div class="jobs" id="jobs"><div class="empty">nothing queued yet</div></div>
+  </section>
+</main>
+
+<nav class="tabbar" id="tabbar">
+  <button data-tab="create" class="active"><span class="dot">＋</span>Create</button>
+  <button data-tab="queue"><span class="dot">≡</span>Queue</button>
+  <button data-tab="batches"><span class="dot">▤</span>Batches</button>
+</nav>
+
+<!-- first-run setup -->
+<div class="setupOverlay" id="setup">
+  <div class="setupCard">
+    <div class="setupBrand">
+      <span class="logo">SERVER AI <b>STUDIO</b></span>
+      <button class="btn ghost" id="setupClose" title="Close" hidden>✕</button>
+    </div>
+    <h1>Where should your clips render?</h1>
+    <p class="setupLead">
+      Pick a provider once. You can change it later — or skip this if you don't have keys yet.
+      Nothing is charged until you actually render a clip.
+    </p>
+    <div class="providers">
+      <button class="providerCard" data-provider="runpod" type="button">
+        <span class="pcTop"><b>Runpod</b><span class="pcTag">Recommended</span></span>
+        <span class="pcDesc">Rent a 96 GB GPU only while a clip renders. Pay by the second.</span>
+        <span class="pcMeta">About $3.49/hour while rendering · no monthly machine</span>
+      </button>
+      <button class="providerCard" data-provider="vast" type="button">
+        <span class="pcTop"><b>Vast.ai</b></span>
+        <span class="pcDesc">Rent a 96 GB ComfyUI machine by the hour. More control, more setup.</span>
+        <span class="pcMeta">About $1–2/hour plus disk · stop it when you are done</span>
+      </button>
+    </div>
+
+    <div id="setupRunpod" class="setupFields" hidden>
+      <div class="field">
+        <label for="setupEndpoint">Runpod endpoint ID</label>
+        <input id="setupEndpoint" type="text" placeholder="the short code from your endpoint" autocomplete="off">
+        <div class="hint">Runpod → Serverless → your endpoint. It is the code in the page URL.</div>
+      </div>
+      <div class="field">
+        <label for="setupKey">Runpod API key</label>
+        <input id="setupKey" type="password" placeholder="rpa_…" autocomplete="off">
+        <div class="hint">
+          Runpod → Settings → API Keys → Create. It starts with <code>rpa_</code>.
+          <a href="https://console.runpod.io/user/settings" target="_blank" rel="noreferrer">Open Runpod</a>
+        </div>
+      </div>
+      <div class="hint">New to Runpod? Follow <code>docs/RUNPOD-MINIMAX-H3.md</code>. The short version: download the models on a cheap CPU pod first, then attach the 96 GB GPU.</div>
+    </div>
+
+    <div id="setupVast" class="setupFields" hidden>
+      <div class="field">
+        <label for="setupVastKey">Vast.ai API key</label>
+        <input id="setupVastKey" type="password" placeholder="your Vast.ai key" autocomplete="off">
+        <div class="hint">
+          Vast.ai → Account → API Keys.
+          <a href="https://console.vast.ai/" target="_blank" rel="noreferrer">Open Vast.ai</a>
+        </div>
+      </div>
+      <div class="field">
+        <label for="setupVastInst">Vast.ai machine ID</label>
+        <input id="setupVastInst" type="text" placeholder="12345678" autocomplete="off">
+        <div class="hint">The number in the machine's page. You can add it later if you have not rented one yet.</div>
+      </div>
+      <div class="field">
+        <label for="setupComfyUrl">ComfyUI address (optional)</label>
+        <input id="setupComfyUrl" type="text" placeholder="http://your-machine:8189" autocomplete="off">
+        <div class="hint">Only needed if you run ComfyUI somewhere other than the Vast machine above.</div>
+      </div>
+      <div class="hint">New to Vast.ai? Follow <code>docs/VAST-MINIMAX-H3.md</code>.</div>
+    </div>
+
+    <div class="setupNote" id="setupNote" hidden></div>
+    <div class="setupActions">
+      <button class="btn ghost" id="setupSkip">Skip for now</button>
+      <button class="btn primary" id="setupSave">Save and continue</button>
+    </div>
+    <p class="hint setupFoot">
+      Keys stay on this device in <code>~/.server-ai-studio/config.json</code>.
+      They are never written into the project folder and never sent to your browser.
+    </p>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="inner">
+    <div class="grouphead" style="margin-top:0">
+      <span id="modalTitle">compare</span><span class="line"></span>
+      <button class="btn ghost" id="closeModal">Close</button>
+    </div>
+    <div class="cmp" id="cmp"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
